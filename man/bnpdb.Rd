@@ -2,6 +2,7 @@
 % Please edit documentation in R/bnpdb-package.R
 \docType{package}
 \name{bnpdb}
+\alias{bnpdb-package}
 \alias{bnpdb}
 \title{The \code{bnpdb} Package}
 \description{

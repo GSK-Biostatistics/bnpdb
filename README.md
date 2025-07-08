@@ -5,11 +5,6 @@
 
 # `{bnpdb}`: Bayesian Nonparametric Dynamic Borrowing for Time-to-Event Models
 
-**Note:** This repository is archived. For the most recent information
-on the package, please view the official [{`bnpdb`} GitHub
-Repository](https://github.com/GSK-Biostatistics/bnpdb) GitHub
-repository.
-
 ## Overview
 
 The `{bnpdb}` R package provides tools for **Bayesian nonparametric
@@ -32,7 +27,7 @@ The core model for current data assumes a **mixture of normal
 distributions** for the log event times, conditional on covariates:
 
 $$
-f(\log t \mid x) = \sum_{k=1}^{\infty} w_k \, \mathcal{N}(\log t \mid x^\top \beta_k, \tau_k^{-1}),
+f(\log t \mid x) = \sum_{k=1}^{\infty} w_k \cdot  \mathcal{N}(\log t \mid x^\top \beta_k, \tau_k^{-1}),
 $$
 
 where:
