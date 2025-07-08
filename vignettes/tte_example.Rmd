@@ -1,0 +1,337 @@
+---
+title: "Time-to-event example with and without borrowing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Time-to-event example with and without borrowing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(pillar.sigfig = 3)
+```
+
+## Introduction
+
+This vignette demonstrates how to fit Bayesian nonparametric time-to-event regression models using dynamically borrowed historical data. We simulate data from current and historical sources, fit a variety of models using the `tte_reg_bnp()` function, and obtain marginal survival and hazard estimates using `tte_marginalize()`.
+
+### The `{bnpdb}` package
+Let $y$ denote an observation from a current data set and let $y_0$ denote an
+observation from an external data set. The `{bnpdb}` package assumes that
+$y$ comes from some density $F$, and $y_0$ comes from some mixture of $F$ and
+some other density $G$, i.e., 
+$$
+  y \sim F \ \ \ \ \ y_0 \sim p\times F + (1 - p) \times G
+$$
+As opposed to making parametric assumptions about $F$ and/or $G$, we assume the
+Dirichlet process mixture model (DPMM)
+$$
+  y | F, \theta_F \sim F(\cdot | \theta_F), \ \ \ \ \ y_0 | F, G, \theta_F, \theta_G, p \sim pF(\cdot | \theta_F) + (1 - p) G(\cdot | \theta_G)
+$$
+where $\theta_F$ and $\theta_G$ are parameters for distributions $F$ and $G$,
+respectively, $\theta_F \sim DP(\alpha_F, F_0)$ and 
+$\theta_G \sim DP(\alpha_G, G_0)$,
+$DP(a, H)$ is the Dirichlet process with concentration parameter $a$ and base
+measure $H$. 
+
+The `{bnpdb}` package implements a stick-breaking representation of the DPMM.
+Specifically, we assume
+$$
+  F(y) = \sum_{k=1}^{\infty} \left[ v_k \prod_{j < k}(1 - v_j) \right] F_k(y | \theta_{F_k}), \ \ v_k \sim \text{Beta}(1, \alpha_F), \ \ \theta_{F_k} \sim F_0
+$$
+and an analogous definition for $G$. In practice, the sum is truncated and the
+user can decide the truncation point.
+
+In `{bnpdb}`, we use assume a log-normal kernel, i.e.,
+$$
+  y | \theta_{F_k} \sim \text{Log-Normal}(\mu_k, \sigma_k^2)
+$$
+we allow the user to control for covariates via the model
+$$
+  y | \theta_{F_k}, x \sim \text{Log-Normal}(x'\beta_k, \sigma_k^2).
+$$
+We now use this latter notation since the former is simply an intercept-only
+regression model
+
+### Base measure and priors
+For the exchangeable group parameters (current data and external data deemed to be exchangeable), we assume semi-conjugate priors of the form
+
+* $\beta_{F_k} \sim MVN(m_{F_0}, S_{F_0})$
+* $\frac{1}{\sigma^2_{F_k}} := \tau_{F_k} \sim \text{Gamma}(a_{F_0}, b_{F_0})$
+* $\alpha_{F} \sim \text{Truncated-Gamma}(c_F, d_F, l_F, u_F)$
+* $p \sim \text{Beta}(s_1, s_2)$
+
+The priors for the nonexchangeble (external data subjects deemed to be not exchangeable)
+are given analogously.
+
+The default behavior in `{bnpdb}` is to use weakly informative data-driven hyperparameters, specifically
+
+* $m_{F_0}$, $S_{F_0}$, $a_{F_0}$ and $b_{F_0}$ are chosen to be based on the maximum likelihood estimate of the current data rescaled to 5 events.
+* $c_F = 12$, $d_F = 2$, $l_F = 0$, $u_F = \infty$ to encourage flexibility
+* $s_1 = 0.5$, $s_2 = 0.5$
+
+
+---
+
+## Example usage
+We now show how to use the package. We begin by loading useful libraries and generating current and external
+data sets. We then proceed to the analysis
+
+### Generate current and historical data sets
+Let $T$ denote some event time and let $Y = \log T$. Let the subscript $0$ 
+indicate the external data
+Below, we create current and external data from the following time-to-event model:
+
+$$
+f(y) = N(y | 1 + 1 \times a + 0\times x, 0.5)
+$$
+$$
+  f(y_0) = 0.80 \times N(y_0 | 1 + a + 0\times x, 0.5)
+  + 0.20 \times N(y_0 | -1 - a + 0\times x, 0.5)
+$$
+so that the probability of being exchangeable is $p = 0.80$. We also generate log
+censoring times from a normal distribution to have an intermediate degree
+of censoring
+
+```{r, message = FALSE, warning = FALSE, error = FALSE}
+library(bnpdb)
+library(tidyverse)
+library(posterior)  ## for summaries
+library(survival)   ## for survival formulas
+library(distributional)
+
+## Set seed for reproducibility
+set.seed(741)
+
+n     <- 100
+n0    <- 100
+N     <- n + n0
+pexch <- 0.80
+
+beta  <- cbind(c(1, 1, 0), c(-1, -1, 0))
+sigma <- c(0.5, 0.75)
+
+a     <- rbinom(N, 1, 0.5)      ## treatment indicator
+x     <- rbinom(N, 1, 0.5)      ## binary covariate
+eps0  <- rbinom(n0, 1, pexch)   ## exchangeability indicator
+eps   <- c(rep(1, n), 2 - eps0) ## 1 = exch; 2 = unexch
+
+X     <- cbind(1, a, x)
+Mu    <- unlist( 
+  lapply(1:N, function(i) { as.numeric(X[i, ] %*% beta[, eps[i]] ) } ) 
+)
+
+logt     <- rnorm(N, Mu, sigma[eps])
+logc     <- rnorm(N, mean(Mu) + 0.50, sd = 0.25)
+event    <- logt <= logc
+logy     <- ifelse(event, logt, logc)
+dat      <- data.frame(y = exp(logy), event = event, a = a, x = x)
+curdata  <- dat[1:n, ]
+histdata <- dat[-(1:n), ]
+```
+
+
+### The models
+The `{bnpdb}` package can handle multiple different types of regression models:
+
+1. Intercept-only models
+2. Stratum-only models
+3. Models with covariates (with or without strata)
+
+We will demonstrate each of these three types of models below. Note that
+`{bnpdb}` handles each model under the cases of borrowing 
+(i.e., with an external data aset)
+and without borrowing.
+
+#### Intercept-only model (no borrowing)
+
+##### Basic usage (MCMC sampling)
+
+Below, we fit the model 
+$$
+  f(y) = \sum_{k=1}^K \left[ v_k \prod_{j < k}(1 - v_j) \right] N(y | \beta_{0k}, \tau_k^{-1}), \ \ v_k \sim \text{Beta}(1, \alpha)
+$$
+with default hyperparameters.
+
+```{r, message = FALSE, warning = FALSE, error = FALSE}
+fit.intonly <- tte_reg_bnp(
+  Surv(y, event) ~ 1, data = curdata, K = 5,
+  nburnin = 2000, nsamples = 10000
+)
+summary(fit.intonly)
+```
+The posterior summary indicates that most of the weight is on a single component,
+which makes sense since the data were generated from a parametric log-normal
+accelerated failure time model. One can customize which quantities
+are displayed in the summary, e.g.,
+
+```{r}
+summary(fit.intonly, mean, sd, ~quantile2(.x, probs = c(0.025, 0.975)))
+```
+
+
+##### Obtaining marginal quantities about the distribution
+The MCMC sampler above provides posterior samples for regression coefficients
+and standard deviations. In practice, we likely care more about summarizing the
+survival function (or related functions like the hazard / restricted mean survival time).
+
+The function `tte_marginalize` converts conditional quantities into marginal ones.
+
+```{r}
+## Define marginalization times
+tau   <- max(curdata$y[curdata$event == 1])
+times <- seq(0.01, tau, length.out = 20)
+
+marg.intonly <- tte_marginalize(
+  fit.intonly, curdata, stratum_var = NULL,
+  hazard_times = times, log_hazard = TRUE,
+  survival_times = times, log_survival = FALSE
+)
+marg.intonly
+```
+
+Note that the survival function returned on its original scale, but because
+`log_hazard` was `TRUE`, the hazard function was returned on the log scale.
+
+##### Incorporating external data
+
+Incorporating external data is quite easy with the `external_data` argument.
+Such a model could be fit using the example code below
+
+```{r, run = FALSE}
+fit.intonly.borrow = tte_reg_bnp(
+  Surv(y, event) ~ 1
+  , data = curdata, K = 5
+  , external_data = histdata, K_unexch = 5
+  , nburnin = 2000, nsamples = 10000
+)
+```
+
+From here, one can perform the same type of analysis as above.
+
+
+#### Incorporating covariates (with borrowing)
+
+We now show how covariates can be included. There are two ways to include
+covariates with strata (e.g., treatment arm):
+
+1. Include stratum indicator and the covariate in the linear predictor
+
+2. Have stratum-specific models with covariates in the linear predictor
+
+We can accommodate both in `{bnpdb}`. 
+
+##### Stratum membership in linear predictor
+
+Below, we control for stratum membership in the linear predictor, borrowing
+information from the external data. Note that incorporation of external
+data results in an MCMC sampler that takes longer than analyzing the current
+data alone. This is because the MCMC sampler must classify each external data
+observation to be exchangeable or not.
+
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+fit.pooled = tte_reg_bnp(
+  Surv(y, event) ~ a + x
+  , data = curdata, K = 5
+  # , external_data = histdata, K_unexch = 5  ## uncomment to borrow information
+  , nburnin = 2000, nsamples = 10000
+)
+fit.pooled
+```
+
+Printing the result also summarize `pexch`, which is the marginal probability
+that an external data participant is exchangeable with the current data. Again,
+almost all the weight is on a single component.
+
+We can obtain marginal quantities by calling `tte_marginalize` like above. Since
+there is a non-stratum covariate in the model, calling this function will perform
+the Bayesian bootstrap to integrate over the covariate distribution. For example,
+the calculation of the marginal survival time for stratum $a$ is
+$$
+  S_a(t) = \Pr(T > t | A = a) = \int \Pr(T > t | A = a, X = x) f_X(x) dx
+  \approx \sum_{i=1}^n \omega_i \Pr(T > t | A = a, X = x_i),
+$$
+where $(\omega_1, \ldots, \omega_n) \sim \text{Dirichlet}(1/n, \ldots, 1/n)$ are
+random weights.
+
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+marg.pooled = tte_marginalize(
+  fit.pooled, curdata, stratum_var = 'a',
+  survival_times = times, log_survival = FALSE, 
+  hazard_times = times, log_hazard = TRUE
+)
+marg.pooled
+```
+
+
+
+
+##### Stratum-specific models
+A more flexible model estimates stratum-specific effects for the covariates.
+Below, we estimate the model
+$$
+  f_a(y) = \int N(y | \beta_{a0} + \beta_{a1} x, \sigma_a^2) dF_a(\beta_{a0}, \beta_{a1}, \sigma_a^2)
+$$
+where $F_a(\beta_{a0}, \beta_{a1}, \sigma_a^2)$ is given a Dirichlet process prior
+with conjugate base measure.
+
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+fit.stratified = lapply(0:1, function(arm)
+    tte_reg_bnp(
+      Surv(y, event) ~ x
+      , data = curdata[curdata$a == arm, ], K = 5
+      , nburnin = 2000, nsamples = 10000
+  )
+)
+fit.stratified
+```
+The function `tte_marginalize` also works on lists if each element of the list
+is an output from calling `tte_reg_bnp`:
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+strat.pooled = tte_marginalize(
+  fit.stratified, curdata, stratum_var = 'a',
+  survival_times = times, log_survival = FALSE
+)
+strat.pooled
+```
+
+
+## Plotting marginal functions
+We can also plot marginal quantities using the `tte_plot` function, as shown below.
+This function produces a list of plots using the `ggplot2` package. This
+list of plots can be passed onto functions from other packages to create a panel
+plot, such as `ggarrange` from the `ggpubr` package.
+```{r, message = FALSE, warning = FALSE}
+library(ggthemes) ## for colorblind friendly palettes
+library(ggpubr)   ## to create a panel
+
+## Create list of plots
+plots = tte_plot(
+  marg.pooled, point_estimate = 'median', ci_prob = 0.90
+  , quantity = c('survival', 'hazard')
+)
+
+## Colorblind friendly palette:
+plots = lapply(
+  plots
+  , function(p) { p + scale_color_colorblind() + scale_fill_colorblind() }
+)
+
+## Plot individual plots
+plots[[1]]
+plots[[2]]
+
+
+## Create panel plot
+do.call(
+  ggarrange
+  , c(plots, nrow = 1, common.legend = TRUE, legend = "bottom")
+)
+
+```
+
+

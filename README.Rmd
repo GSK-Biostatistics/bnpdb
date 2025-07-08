@@ -1,0 +1,106 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# `{bnpdb}`: Bayesian Nonparametric Dynamic Borrowing for Time-to-Event Models
+
+**Note:** This repository is archived. For the most recent information on the package, please view the official [{`bnpdb`} GitHub Repository](https://github.com/GSK-Biostatistics/bnpdb) GitHub repository.
+
+## Overview
+
+The `{bnpdb}` R package provides tools for **Bayesian nonparametric dynamic borrowing (BDB)**, a principled method to incorporate external data into clinical analyses, particularly **time-to-event outcomes**. 
+
+Built around **Dependent Dirichlet Processes (DDPs)** and a **Latent Exchangeability Prior (LEAP)**, the `{bnpdb}` framework avoids strong parametric assumptions typically required in traditional BDB methods. This package bridges the gap between nonparametric Bayesian modeling and practical dynamic borrowing.
+
+## What is BNPDB?
+
+Bayesian nonparametric dynamic borrowing (BNPDB) is an approach that combines the flexibility of **Bayesian nonparametric models** with the rigor of **dynamic information borrowing** from external sources.
+
+The core model for current data assumes a **mixture of normal distributions** for the log event times, conditional on covariates:
+
+$$
+f(\log t \mid x) = \sum_{k=1}^{\infty} w_k \, \mathcal{N}(\log t \mid x^\top \beta_k, \tau_k^{-1}),
+$$
+
+where:
+
+- The weights follow a **stick-breaking** process: 
+
+  $w_k = v_k \prod_{j<k} (1 - v_j), \quad v_j \sim \text{Beta}(1, \alpha),$
+
+- The parameters $(\beta_k, \tau_k)$ are drawn from a **multivariate normal-gamma** base measure.
+
+External data is modeled via a **mixture of exchangeable and non-exchangeable sources**:
+
+$$
+  f_0(\log t_0 \mid x_0) = \pi f(\log t_0 \mid x_0) + (1 - \pi) g(\log t_0 \mid x_0),
+$$
+
+where $g$ is itself modeled by a **dependent Dirichlet process**, allowing for flexible departures from the current data distribution, and $\pi$ is given a beta prior and estimated from the data (dynamic borrowing).
+
+MCMC inference is conducted via **collapsed Gibbs sampling** using a truncated approximation to the stick-breaking process.
+
+## Why use IPW BDB?
+
+When information borrowing is not needed, analysts often fit **nonparametric or semi-parametric models**, such as the **Cox proportional hazards model**, to flexibly capture hazard dynamics without strong distributional assumptions.
+
+However, when **one needs to borrow information**, traditional dynamic borrowing techniques typically impose **parametric constraints** (e.g., normality, Weibull distributions) to facilitate information sharing.
+
+This is limiting.
+
+The framework implemented in `{bnpdb}` allows:
+
+- Dynamic borrowing **without restrictive parametric assumptions**.
+- Full Bayesian uncertainty quantification using **nonparametric priors**.
+- Flexible borrowing driven by the **similarity between current and external populations**, as encoded in the LEAP.
+
+## When can IPW BDB be used?
+
+Use `{bnpdb}` when:
+
+- You have **time-to-event data** in a clinical or observational study.
+- You wish to **incorporate external data** (e.g., historical controls, real-world data).
+- You seek a **Bayesian solution** without committing to strong parametric assumptions.
+- Traditional dynamic borrowing methods **lack robustness** or **fail to capture heterogeneity** in your data.
+
+The approach is particularly suited for settings where:
+
+- The **exchangeability of external data** is uncertain or partial.
+- You want the model to **decide how much to borrow**, rather than making fixed inclusion/exclusion decisions.
+
+---
+
+_Interested in pushing the boundaries of Bayesian borrowing for complex survival data? `{bnpdb}` was built for you._
+
+### Installation
+```{r, eval = FALSE}
+# Install the development version from GitHub
+remotes::install_github("GSK-Biostatistics/bnpdb")
+```
+
+### Usage
+At the moment `{bnpdb}` covers nonparametric modelling of time-to-event outcomes
+(with or without borrowing). Functions are available to convert conditional
+quantities into marginal quantities (e.g., RMST, hazards, survival probabilities).
+
+### Contributing
+Feel free to contribute to the `{bnpdb}` package by reporting issues or submitting pull requests on the GitHub repository.
+
+### License
+This package is released under GLP-3.
+
+

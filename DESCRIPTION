@@ -1,0 +1,40 @@
+Package: bnpdb
+Type: Package
+Title: Bayesian nonparametric dynamic borrowing via Dirichlet process mixtures
+Version: 1.0
+Date: 2024-08-04
+Author: Ethan Alt
+Maintainer: Ethan Alt <ethanaltphd@gmail.com>
+Description: Conducts dynamic information borrowing from external data nonparametrically.
+License: GPL (>= 3)
+Imports: 
+    cli,
+    distributional,
+    dplyr,
+    ggplot2,
+    mvtnorm,
+    posterior,
+    Rcpp (>= 1.0.13),
+    survival
+LinkingTo: Rcpp, RcppArmadillo, RcppProgress
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Encoding: UTF-8
+Collate: 
+    'RcppExports.R'
+    'bnpdb-package.R'
+    'inputs_continuous.R'
+    'tte_inits.R'
+    'tte_marginalize.R'
+    'tte_plot.R'
+    'tte_print_and_summarize.R'
+    'tte_reg_bnp.R'
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    tidyverse,
+    ggpubr,
+    ggthemes
+Config/testthat/edition: 3
+VignetteBuilder: knitr
