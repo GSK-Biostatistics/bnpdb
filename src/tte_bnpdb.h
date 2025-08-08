@@ -112,7 +112,7 @@ namespace TTE_BNPDB {
     
     // Constructor
     Pars(
-      tteData const& data, tteData const& histdata
+      tteData const& data, tteHistData const& histdata
     // Exchangeable
     , arma::mat const& beta_init, arma::vec const& tau_init
     , double alpha_init, arma::vec const& v_init
@@ -152,7 +152,7 @@ namespace TTE_BNPDB {
       ystar0.elem(histdata.cenindx) += 0.1; // Adjust for censored
       pexch      = pexch_init;
       Mu0_exch   = histdata.X * beta;
-      Mu0_unexch = histdata.X * beta_unexch;
+      Mu0_unexch = histdata.Xunexch * beta_unexch;
       eps0  = eps0_init;
       sizes0 = arma::zeros<arma::uvec>(K0);
       n0exch   = 0;
@@ -170,7 +170,7 @@ namespace TTE_BNPDB {
     }
     
     // Update regression parameters (exchangeable)
-    void update_regression_params_exch(const tteData& data, const tteData& histdata, const BaseMeasure& bm) {
+    void update_regression_params_exch(const tteData& data, const tteHistData& histdata, const BaseMeasure& bm) {
       for (int k = 0; k < K; k++) {
         arma::uvec class_indices_cur  = arma::find(z == k);               // indices of current data subjects
         arma::uvec class_indices_hist = arma::find(z0 == k && eps0 == 1);  // indices of historical data subjects
@@ -217,7 +217,7 @@ namespace TTE_BNPDB {
     }
     
     
-    void update_regression_params_unexch(const tteData& histdata, const BaseMeasure& bm) {
+    void update_regression_params_unexch(const tteHistData& histdata, const BaseMeasure& bm) {
       for (int k = 0; k < K0; k++) {
         arma::uvec class_indices_hist = arma::find(z0 == k && eps0 == 0);  // indices of historical data subjects
         int n_k = class_indices_hist.n_elem;        // total number of subjects in class
@@ -225,7 +225,7 @@ namespace TTE_BNPDB {
           tau_unexch[k]      = R::rgamma(bm.tau_unexch_shape, 1.0 / bm.tau_unexch_rate);
           beta_unexch.col(k) = arma::mvnrnd(bm.beta_unexch_mean, bm.beta_unexch_cov);
         } else { 
-          arma::mat X_k     = histdata.X.rows(class_indices_hist);
+          arma::mat X_k     = histdata.Xunexch.rows(class_indices_hist);
           arma::vec ystar_k = ystar0(class_indices_hist);
           arma::mat XtX     = X_k.t() * X_k;
           arma::vec Xty     = X_k.t() * ystar_k;
@@ -245,7 +245,7 @@ namespace TTE_BNPDB {
       } 
       // Update means and standard deviation
       sigma0     = 1.0 / arma::sqrt(tau_unexch);
-      Mu0_unexch = histdata.X * beta_unexch;
+      Mu0_unexch = histdata.Xunexch * beta_unexch;
     } 
     
     // Update class assignments (current)
@@ -262,7 +262,7 @@ namespace TTE_BNPDB {
       }
     }
     
-    void update_classes_historical(const tteData& histdata) {
+    void update_classes_historical(const tteHistData& histdata) {
       int n0 = histdata.n;
       arma::vec logprobs(K + K0, arma::fill::zeros);
       arma::vec probs(K + K0, arma::fill::zeros);
@@ -305,49 +305,7 @@ namespace TTE_BNPDB {
           sizes0[z0[i]] += 1;
         }
       }
-    }  // update_classes_historical
-    
-    // // Update class assignments (historical)
-    // void update_classes_historical(const tteData& histdata) {
-    //   int n0 = histdata.n;
-    //   arma::vec logprobs(K + K0, arma::fill::zeros);
-    //   arma::vec probs(K + K0, arma::fill::zeros);
-    //   double logp   = log(pexch);
-    //   double log1mp = log1p(-pexch);
-    //   int z0temp;
-    //   for ( int i = 0; i < n0; i++ ) {
-    //     int z0_i   = z0[i];
-    //     int eps0_i = eps0[i];
-    //     // Compute sizes with i-th subject removed
-    //     if ( eps0_i ) {
-    //       sizes[z0_i] -= 1;
-    //       n0exch      -= 1;
-    //     }
-    //     else {
-    //       sizes0[z0_i] -= 1;
-    //       n0unexch     -= 1;
-    //     }
-    //     // Compute probability vector: first K elements refer to exchangeable group
-    //     // and remaining K0 elements refer to unexchangeable group
-    //     logprobs.head(K)   = logp   + logw  + arma::log_normpdf(ystar0[i], Mu0_exch.row(i).t(), sigma);
-    //     logprobs.tail(K0)  = log1mp + logw0 + arma::log_normpdf(ystar0[i], Mu0_unexch.row(i).t(), sigma0);
-    //     logprobs          -= logsumexp(logprobs);
-    //     probs              = arma::exp(logprobs);
-    //     z0temp = rcat(probs);
-    //     if ( z0temp < K ) {
-    //       z0[i]   = z0temp;
-    //       eps0[i] = 1;
-    //       sizes[z0[i]] += 1; 
-    //       n0exch += 1;
-    //     }
-    //     else {
-    //       z0[i]   = z0temp - K;
-    //       eps0[i] = 0;
-    //       sizes0[z0[i]] += 1;
-    //       n0unexch += 1;
-    //     }
-    //   }
-    // }
+    } 
     
     // Update stick-breaking weights (exchangeable)
     void update_sb_variables_exch() {
@@ -401,7 +359,7 @@ namespace TTE_BNPDB {
     }  
     
     // Update censored variables (historical)
-    void update_censored_vars_historical(const tteData& histdata) {
+    void update_censored_vars_historical(const tteHistData& histdata) {
       if (histdata.ncen > 0) {
         for (int j = 0; j < histdata.ncen; j++) {
           int i      = histdata.cenindx[j];   // index of censored value
@@ -433,7 +391,7 @@ namespace TTE_BNPDB {
 
   // Convert Rcpp list of parameters to Pars object
   Pars list2pars(
-      tteData const& data, tteData const& histdata, Rcpp::List const& pars
+      tteData const& data, tteHistData const& histdata, Rcpp::List const& pars
   ) {
     // Exchangeable params
     arma::mat beta  = pars["beta"];

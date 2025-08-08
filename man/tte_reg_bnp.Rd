@@ -8,15 +8,11 @@ tte_reg_bnp(
   formula,
   data,
   K,
+  formula_unexch = formula,
   external_data = NULL,
   K_unexch = NULL,
-  beta_bm = NULL,
-  tau_bm = NULL,
-  alpha_prior = dist_truncated(dist_gamma(12, 2), 0, Inf),
-  beta_unexch_bm = NULL,
-  tau_unexch_bm = NULL,
-  alpha_unexch_prior = dist_truncated(dist_gamma(12, 2), 0, Inf),
-  pexch_prior = dist_beta(0.5, 0.5),
+  prior_ess = 5,
+  bm = list(),
   inits = list(),
   nburnin = 2000,
   nsamples = 10000,
@@ -24,29 +20,30 @@ tte_reg_bnp(
 )
 }
 \arguments{
-\item{formula}{a  \code{\link[stats]{formula}} giving how the survival time is related to covariates}
+\item{formula}{a  \code{\link[stats]{formula}} giving how the survival time is related to covariates for the exchangeable data}
 
 \item{data}{a \code{\link[base]{data.frame}} for the current data}
 
 \item{K}{integer with value \eqn{\ge 2} giving truncation point of the stick-breaking representation for the exchangeable population}
 
+\item{formula_unexch}{a  \code{\link[stats]{formula}} giving how the survival time is related to covariates for the unexchangeable data; this may be different form \code{formula} when, e.g., borrowing information from a control arm only.}
+
 \item{external_data}{optional \code{\link[base]{data.frame}} for the external data. If \code{NULL}, a standard DPMM is fit to \code{data}.}
 
 \item{K_unexch}{truncation point of the stick-breaking representation for the nonexchangeable population; required to be an integer \eqn{\ge 2} if \code{external_data} is not \code{NULL}}
 
-\item{beta_bm}{either \code{NULL} or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the exchangeable population; if \code{NULL}, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to 5 events) using \code{data}.}
+\item{prior_ess}{a value giving the prior effective sample size for the base measure; ignored if the base measure is specified by the user}
 
-\item{tau_bm}{a \code{\link[distributional]{dist_gamma}} base measure on the precision parameter for the exchangeable population; if \code{NULL}, defaults to a gamma prior that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with variance rescaled to 5 events using \code{data}}
-
-\item{alpha_prior}{a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the exchangeable DPMM}
-
-\item{beta_unexch_bm}{either \code{NULL} or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the nonexchangeable population; required if \code{external_data} is not \code{NULL}; if \code{NULL}, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to 5 events) using \code{external_data}}
-
-\item{tau_unexch_bm}{a \code{\link[distributional]{dist_gamma}} base measure for the precision of the nonexchangeable population; required if \code{external_data} is not \code{NULL}; if \code{NULL}, defaults to a gamma prior that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with variance rescaled to 5 events using \code{data}}
-
-\item{alpha_unexch_prior}{a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the nonexchangeable DPMM; required if \code{external_data} is not \code{NULL}}
-
-\item{pexch_prior}{a \code{\link[distributional]{dist_beta}} prior for the probability that an external observation is exchangeable; required if \code{external_data} is not \code{NULL}}
+\item{bm}{an optional named \code{list} containing base measures and priors for parameters with the following elements:
+\itemize{
+\item \code{beta_bm}: either \code{NULL} or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the exchangeable population; if \code{NULL}, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to \code{prior_ess} observations) using \code{data}
+\item \code{tau_bm}: either \code{NULL} or a \code{\link[distributional]{dist_gamma}} base measure on the precision parameter for the exchangeable population; if \code{NULL}, defaults to a gamma prior with shape parameter \eqn{\ge} 1.1 that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with asymptotic variance rescaled to \code{nsubj} observations using \code{data}
+\item \code{alpha_prior}: either \code{NULL} or a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the exchangeable DPMM. if \code{NULL}, defaults to a gamma prior with shape parameter 8 and rate parameter 2
+\item \code{beta_unexch_bm}: either \code{NULL} or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the nonexchangeable population; required if \code{external_data} is not \code{NULL}; if \code{NULL}, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to \code{nsubj} observations) using \code{external_data}
+\item \code{tau_unexch_bm}: either \code{NULL} or a \code{\link[distributional]{dist_gamma}} base measure for the precision of the nonexchangeable population; required if \code{external_data} is not \code{NULL}; if \code{NULL}, defaults to a gamma prior with shape parameter \eqn{\ge} 1.1 that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with asymptotic variance rescaled to \code{nsubj} observations using \code{external_data}
+\item \code{alpha_unexch_prior}: either \code{NULL} or a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the nonexchangeable DPMM; if \code{NULL}, defaults to a gamma prior with shape parameter 8 and rate parameter 2
+\item \code{pexch_prior}: either \code{NULL} or a \code{\link[distributional]{dist_beta}} prior for the probability that an external observation is exchangeable; if \code{NULL}, defaults to a beta prior with shape parameters equal to 0.5
+}}
 
 \item{inits}{an optional \code{list} containing starting values for any of the following:
 \itemize{

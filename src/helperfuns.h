@@ -22,4 +22,5 @@ arma::vec compute_rmst_bb(arma::mat const& Mu, arma::rowvec const& sigma, arma::
 arma::mat compute_hazard_conditional(arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw, arma::vec const& logtimes, bool log);
 arma::vec compute_hazard_bb(arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw, arma::vec const& logomega, arma::vec const& logtimes, bool log);
 tteData list2tteData(Rcpp::List const& data);
+tteHistData list2tteHistData(Rcpp::List const& histdata);
 #endif

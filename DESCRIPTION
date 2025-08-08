@@ -23,12 +23,10 @@ Encoding: UTF-8
 Collate: 
     'RcppExports.R'
     'bnpdb-package.R'
-    'inputs_continuous.R'
-    'tte_inits.R'
+    'tte_reg_bnp.R'
     'tte_marginalize.R'
     'tte_plot.R'
     'tte_print_and_summarize.R'
-    'tte_reg_bnp.R'
 Suggests: 
     knitr,
     rmarkdown,

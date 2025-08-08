@@ -4,23 +4,15 @@
 #include "tte_bnpdb.h"
 
 
-//' C++ sampler of DPMM method for time-to-event data
+//' C++ sampler of BNPDB method for time-to-event data
 //' 
-//' @param y log of observed event time for current data
-//' @param X design matrix for current data
-//' @param event event indicator for current data (1 = event; 0 = right censored)
-//' @param K number of stick breaking components for exchangeable density
-//' @param beta_mean mean hyperparameter for normal base measure on regression coefficients conditional on precision for exchangeable density
-//' @param beta_cov scale hyperparameter for normal base measure on regression coefficients conditional on precision for exchangeable density
-//' @param tau_shape shape hyperparameter for gamma base measure on precision parameter for exchangeable density
-//' @param tau_rate rate hyperparameter for gamma base measure on precision parameter for exchangeable density
-//' @param alpha_shape shape hyperparameter for truncated gamma prior on DP concentration parameter for exchangeable density
-//' @param alpha_rate rate hyperparameter for truncated gamma prior on DP concentration parameter for exchangeable density
-//' @param alpha_lower lower bound for truncated gamma prior on DP concentration parameter for exchangeable density
-//' @param alpha_upper upper bound for truncated gamma prior on DP concentration parameter for exchangeable density
-//' @param niter number of desired posterior samples post burn-in
-//' @param nburnin number of burn-in samples
-//' @param thin number of samples to thin post burn-in
+//' @param data_list a `list` with the elements (y, event, X)c orresponding to the current data
+//' @param histdata_list a `list` with the elements (y, event, X) corresponding to the external data
+//' @param basemeasure_list a `list` giving the base measure and priors
+//' @param inits_list a `list` giving initial values
+//' @param niter number of MCMC samples post burn-in and thinning
+//' @param nburnin burn-in size
+//' @param nthin thin size
 //' 
 //' @return a list giving posterior samples
 //' @keywords internal
@@ -33,7 +25,7 @@ Rcpp::List tte_reg_bnpdb_cpp(
 ) {
   // Initialize data, historical data base measure, and parameters (pars) objects
   tteData data                 = list2tteData(data_list);
-  tteData histdata             = list2tteData(histdata_list);
+  tteHistData histdata         = list2tteHistData(histdata_list);
   TTE_BNPDB::BaseMeasure bm    = TTE_BNPDB::list2basemeasure(basemeasure_list);
   TTE_BNPDB::Pars pars         = TTE_BNPDB::list2pars(data, histdata, inits_list);
   

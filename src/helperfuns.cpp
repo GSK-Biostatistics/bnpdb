@@ -342,3 +342,16 @@ double logsumexp(arma::vec const& x) {
  }
 
 
+//' Convert Rcpp list of historical data to a tteHistData object
+//' @keywords internal
+//' @noRd
+ tteHistData list2tteHistData(Rcpp::List const& histdata) {
+   arma::vec y       = histdata["y"];
+   arma::uvec event  = histdata["event"];
+   arma::mat X       = histdata["X"];
+   arma::mat Xunexch = histdata["Xunexch"];
+   tteHistData histdat(y, event, X, Xunexch);
+   return histdat;
+ } 
+
+
