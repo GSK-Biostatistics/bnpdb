@@ -1,8 +1,8 @@
 Package: bnpdb
 Type: Package
 Title: Bayesian nonparametric dynamic borrowing via Dirichlet process mixtures
-Version: 1.0
-Date: 2024-08-04
+Version: 0.0.2
+Date: 2024-08-12
 Author: Ethan Alt
 Maintainer: Ethan Alt <ethanaltphd@gmail.com>
 Description: Conducts dynamic information borrowing from external data nonparametrically.
