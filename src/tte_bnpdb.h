@@ -36,6 +36,8 @@ namespace TTE_BNPDB {
     double alpha_unexch_upper;
     double pexch_shape1;
     double pexch_shape2;
+    double pexch_lower;
+    double pexch_upper;
     
     BaseMeasure(
       const arma::vec& beta_mean_, const arma::mat& beta_prec_,
@@ -44,7 +46,7 @@ namespace TTE_BNPDB {
     , const arma::vec& beta_unexch_mean_, const arma::mat& beta_unexch_prec_
     , double tau_unexch_shape_, double tau_unexch_rate_
     , double alpha_unexch_shape_, double alpha_unexch_rate_, double alpha_unexch_lower_, double alpha_unexch_upper_
-    , double pexch_shape1_, double pexch_shape2_
+    , double pexch_shape1_, double pexch_shape2_, double pexch_lower_, double pexch_upper_
     ) {
       // Exchangeable
       beta_mean      = beta_mean_;
@@ -73,6 +75,8 @@ namespace TTE_BNPDB {
       beta_unexch_mean_prec_mean = arma::dot(beta_unexch_mean, beta_unexch_prec * beta_unexch_mean);
       pexch_shape1         = pexch_shape1_;
       pexch_shape2         = pexch_shape2_;
+      pexch_lower          = pexch_lower_;
+      pexch_upper          = pexch_upper_;
     }  
   };
   
@@ -383,7 +387,9 @@ namespace TTE_BNPDB {
     void update_pexch(BaseMeasure const& bm) {
       double shape1   = bm.pexch_shape1 + n0exch;
       double shape2   = bm.pexch_shape2 + n0unexch;
-      pexch           = R::rbeta(shape1, shape2);
+      double lower    = bm.pexch_lower;
+      double upper    = bm.pexch_upper;
+      pexch           = rtbeta(shape1, shape2, lower, upper);
     }
   };
 
@@ -437,12 +443,14 @@ namespace TTE_BNPDB {
     double alpha_unexch_upper = basemeasure["alpha_unexch_upper"];
     double pexch_shape1 = basemeasure["pexch_shape1"];
     double pexch_shape2 = basemeasure["pexch_shape2"];
+    double pexch_lower  = basemeasure["pexch_lower"];
+    double pexch_upper  = basemeasure["pexch_upper"];
     BaseMeasure bm(
         beta_mean, beta_prec, tau_shape, tau_rate
     , alpha_shape, alpha_rate, alpha_lower, alpha_upper 
     , beta_unexch_mean, beta_unexch_prec, tau_unexch_shape, tau_unexch_rate
     , alpha_unexch_shape, alpha_unexch_rate, alpha_unexch_lower, alpha_unexch_upper 
-    , pexch_shape1, pexch_shape2
+    , pexch_shape1, pexch_shape2, pexch_lower, pexch_upper
     );
     return bm;
   }

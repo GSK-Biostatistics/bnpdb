@@ -283,7 +283,7 @@ tte_check_all_and_export_hyperparams = function(
     alpha_prior_params = parameters(bm$alpha_prior)
     stopifnot( "If `alpha_prior` is truncated, its distribution must be of type `distributional::dist_gamma`" = family( parameters(bm$alpha_prior)$dist ) == 'gamma' )
     hyp$alpha_lower = alpha_prior_params$lower
-    hyp$alpha_upper = alpha_prior_params$lower
+    hyp$alpha_upper = alpha_prior_params$upper
     gamma_params    = parameters( parameters(bm$alpha_prior)$dist )
     hyp$alpha_shape = gamma_params$shape
     hyp$alpha_rate  = gamma_params$rate
@@ -386,11 +386,22 @@ tte_check_all_and_export_hyperparams = function(
     
     ## Check pexch prior and initial value
     stopifnot('`pexch_prior` has not been specified' = !is.null(bm$pexch_prior))
-    stopifnot("`pexch_prior` must be an object from calling `distributional::dist_beta`" = with(bm, all('distribution' %in% class(pexch_prior), family(pexch_prior) == 'beta') ) )
-    stopifnot("Initial values for `pexch` must be between 0 and 1 (exclusive)" = all( inits$pexch > 0, inits$pexch < 1 ))
-    params = parameters(bm$pexch_prior)
-    hyp$pexch_shape1 = params$shape1
-    hyp$pexch_shape2 = params$shape2
+    stopifnot('`pexch_prior` must be an object of type `distribution`' = 'distribution' %in% class(bm$pexch_prior))
+    params  = parameters(bm$pexch_prior)
+    if ( family(bm$pexch_prior) == 'beta' ) {
+      hyp$pexch_shape1 = params$shape1
+      hyp$pexch_shape2 = params$shape2
+      hyp$pexch_lower  = 0
+      hyp$pexch_upper  = 1
+    } else if ( family(bm$exch_prior) == 'truncated' ) {
+      stopifnot( "If `pexch_prior` is a truncated prior, it must be a truncated beta prior" = (family(params$dist) == 'beta'))
+      beta_parameters  = parameters(params$dist)
+      hyp$pexch_shape1 = beta_parameters$shape1
+      hyp$pexch_shape2 = beta_parameters$shape2
+      hyp$pexch_lower  = params$lower
+      hyp$pexch_upper  = params$upper
+    }
+    stopifnot("Initial value for `pexch` is not in prior support" = density(bm$pexch_prior, inits$pexch) > 0 )
     
     ## Check eps0 initial values
     with(inits, stopifnot( 
@@ -438,7 +449,7 @@ tte_check_all_and_export_hyperparams = function(
 #'  \item `beta_unexch_bm`: either `NULL` or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the nonexchangeable population; required if `external_data` is not `NULL`; if `NULL`, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to `nsubj` observations) using `external_data`
 #'  \item `tau_unexch_bm`: either `NULL` or a \code{\link[distributional]{dist_gamma}} base measure for the precision of the nonexchangeable population; required if `external_data` is not `NULL`; if `NULL`, defaults to a gamma prior with shape parameter \eqn{\ge} 1.1 that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with asymptotic variance rescaled to `nsubj` observations using `external_data`
 #'  \item `alpha_unexch_prior`: either `NULL` or a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the nonexchangeable DPMM; if `NULL`, defaults to a gamma prior with shape parameter 8 and rate parameter 2
-#'  \item `pexch_prior`: either `NULL` or a \code{\link[distributional]{dist_beta}} prior for the probability that an external observation is exchangeable; if `NULL`, defaults to a beta prior with shape parameters equal to 0.5
+#'  \item `pexch_prior`: either `NULL`, a \code{\link[distributional]{dist_beta}}, or a truncated beta prior via \code{\link[distributional]{dist_truncated}} prior for the probability that an external observation is exchangeable; if `NULL`, defaults to a beta prior with shape parameters equal to 0.5
 #' }
 #' @param nburnin number of MCMC burn-in samples
 #' @param nsamples number of desired posterior samples after burn-in (and thinning)

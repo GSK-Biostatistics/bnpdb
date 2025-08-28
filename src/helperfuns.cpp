@@ -355,3 +355,30 @@ double logsumexp(arma::vec const& x) {
  } 
 
 
+
+//' Sample from truncated beta distribution
+//' @keywords internal
+//' @noRd
+//' @export
+ double rtbeta(double shape1, double shape2, double lower, double upper) {
+   lower = std::max(0.0, lower);
+   upper = std::min(1.0, upper);
+   
+   if (lower == upper)
+     return lower;
+   else if (lower == 0 && upper == 1)
+     return R::rbeta(shape1, shape2);
+   else if (shape1 == 1 && shape2 == 1)
+     return R::runif( lower, upper );
+   else {
+     // Use inverse transform
+     double Fupper = R::pbeta(upper, shape1, shape2, 1, 0);
+     double Flower = R::pbeta(lower, shape1, shape2, 1, 0);
+     double u      = R::runif(Flower, Fupper);
+     return R::qbeta(u, shape1, shape2, 1, 0);
+   }
+   return(-1.0);   // never reached
+ }
+
+
+
