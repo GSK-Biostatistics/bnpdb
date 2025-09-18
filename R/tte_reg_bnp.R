@@ -606,6 +606,9 @@ tte_reg_bnp = function(
   ## Check base measure and initial values; return hyperparameters
   hyperparams = tte_check_all_and_export_hyperparams(cppData, K, bm, inits, cppExtData, K_unexch)
   
+  ## Put cpp data time on log scale for sampling
+  cppData$y = log(cppData$y)
+  
   
   ## If external data is not specified, proceed to C++ sampling of DPMM using
   ## only specified `data`
@@ -614,14 +617,14 @@ tte_reg_bnp = function(
     smpl = tte_reg_dpmm_cpp(cppData, hyperparams, inits, nsamples, nburnin, thin)
     
   } else {
-  ## If `external_data` is specified, do the same checks and initial values
-  ## as above before proceeding to MCMC sampling
-  
-  ## Obtain posterior sampling using BNPDB
-  smpl = tte_reg_bnpdb_cpp(cppData, cppExtData, hyperparams, inits, nsamples, nburnin, thin)
-  
-  colnames(smpl$eps0) = paste0('eps0[', 1:nrow(cppExtData$X), ']')
-  colnames(smpl$pexch) = "pexch"
+    ## If `external_data` is specified, do the same checks and initial values
+    ## as above before proceeding to MCMC sampling
+    
+    ## Obtain posterior sampling using BNPDB
+    smpl = tte_reg_bnpdb_cpp(cppData, cppExtData, hyperparams, inits, nsamples, nburnin, thin)
+    
+    colnames(smpl$eps0) = paste0('eps0[', 1:nrow(cppExtData$X), ']')
+    colnames(smpl$pexch) = "pexch"
   }
   
   rownames(smpl$beta) = colnames(X)
