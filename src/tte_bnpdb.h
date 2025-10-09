@@ -243,8 +243,8 @@ namespace TTE_BNPDB {
           // Update tau_unexch | beta_unexch
           double sse          = arma::sum( arma::square( ystar_k - X_k * beta_unexch.col(k) ) );
           double tau_shape    = bm.tau_shape + 0.5 * n_k;
-          double tau_rate     = bm.tau_rate + 0.5 * sse;
-          tau_unexch[k]             = R::rgamma(tau_shape, 1.0 / tau_rate);
+          double tau_rate     = bm.tau_rate  + 0.5 * sse;
+          tau_unexch[k]       = R::rgamma(tau_shape, 1.0 / tau_rate);
         } 
       } 
       // Update means and standard deviation
