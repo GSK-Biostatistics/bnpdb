@@ -24,4 +24,5 @@ arma::vec compute_hazard_bb(arma::mat const& Mu, arma::rowvec const& sigma, arma
 tteData list2tteData(Rcpp::List const& data);
 tteHistData list2tteHistData(Rcpp::List const& histdata);
 double rtbeta(double shape1, double shape2, double lower, double upper);
+double sample_tbeta_mixture_posterior(double shape1, double shape2, double lower, double upper,double prior_prob, int nexch, int nunexch);
 #endif

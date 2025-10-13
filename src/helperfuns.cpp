@@ -31,11 +31,11 @@ double logsumexp(arma::vec const& x) {
 
 
 //' stick breaking weights from stick breaking variables
- //' @param x:   K-1 dim arma::vec of stick-breaking [Beta(1, alpha)] variables
- //' @param log: if true, returns result on log scale
- //' 
- //' @return K dim arma::vec of log of stick breaking weights
- //' @noRd
+//' @param x:   K-1 dim arma::vec of stick-breaking [Beta(1, alpha)] variables
+//' @param log: if true, returns result on log scale
+//' 
+//' @return K dim arma::vec of log of stick breaking weights
+//' @noRd
  arma::vec stick_breaking(const arma::vec& x, bool log = false) {
    int K            = x.n_elem + 1;
    arma::vec logx(K, arma::fill::zeros);
@@ -128,11 +128,11 @@ double logsumexp(arma::vec const& x) {
  }  
 
 //' Generate from Dirichlet(1, ..., 1)
- //' @param n number of parameters
- //' @param log whehter to return result on log scale
- //' 
- //' @return Dirichlet(1, ..., 1) vector on specified scale
- //' @noRd 
+//' @param n number of parameters
+//' @param log whehter to return result on log scale
+//' 
+//' @return Dirichlet(1, ..., 1) vector on specified scale
+//' @noRd 
  arma::vec rdirichlet_rng(int const& n, bool const& log = false) {
    arma::vec log_gamma(n, arma::fill::zeros);
    for ( int i = 0; i < n; i++ )
@@ -179,16 +179,16 @@ double logsumexp(arma::vec const& x) {
  }
 
 //' Compute marginal survival function based on DPMM regression
- //'
- //' @param Mu nxK matrix giving mean of each observation for each class
- //' @param sigma K-dim vector giving standard deviation for each class
- //' @param logw K-dim vector giving log weight for each class
- //' @param logomega n-dim vector giving log of Dirichlet random variable
- //' @param logtimes T-dim vector specifying where to report the survival function
- //' @param log if true, reports log survival function
- //'
- //' @return T-dim vector giving marginal survival function on specified scale
- //' @noRd
+//'
+//' @param Mu nxK matrix giving mean of each observation for each class
+//' @param sigma K-dim vector giving standard deviation for each class
+//' @param logw K-dim vector giving log weight for each class
+//' @param logomega n-dim vector giving log of Dirichlet random variable
+//' @param logtimes T-dim vector specifying where to report the survival function
+//' @param log if true, reports log survival function
+//'
+//' @return T-dim vector giving marginal survival function on specified scale
+//' @noRd
  arma::vec compute_survival_bb(
      arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw,
      arma::vec const& logomega, arma::vec const& logtimes, bool log
@@ -204,14 +204,14 @@ double logsumexp(arma::vec const& x) {
  } 
 
 //' Compute conditional RMST function based on DPMM regression
- //'
- //' @param Mu nxK matrix giving mean of each observation for each class
- //' @param sigma K-dim vector giving standard deviation for each class
- //' @param logw K-dim vector giving log weight for each class
- //' @param logtimes T-dim vector specifying which logtimes to evaluate the RMST
- //'
- //' @return T x n matrix of log RMST values
- //' @noRd
+//'
+//' @param Mu nxK matrix giving mean of each observation for each class
+//' @param sigma K-dim vector giving standard deviation for each class
+//' @param logw K-dim vector giving log weight for each class
+//' @param logtimes T-dim vector specifying which logtimes to evaluate the RMST
+//'
+//' @return T x n matrix of log RMST values
+//' @noRd
  arma::mat compute_rmst_conditional(
      arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw,
      arma::vec const& logtimes, bool log
@@ -242,16 +242,16 @@ double logsumexp(arma::vec const& x) {
  } 
 
 //' Compute marginal RMST function based on DPMM regression
- //'
- //' @param Mu nxK matrix giving mean of each observation for each class
- //' @param sigma K-dim vector giving standard deviation for each class
- //' @param logw K-dim vector giving log weight for each class
- //' @param logomega n-dim vector giving log of Dirichlet random variable
- //' @param logtimes T-dim vector specifying which logtimes to evaluate the RMST
- //' @param log if true, reports log RMST
- //'
- //' @return T-dim vector giving marginal RMST on specified scale
- //' @noRd
+//'
+//' @param Mu nxK matrix giving mean of each observation for each class
+//' @param sigma K-dim vector giving standard deviation for each class
+//' @param logw K-dim vector giving log weight for each class
+//' @param logomega n-dim vector giving log of Dirichlet random variable
+//' @param logtimes T-dim vector specifying which logtimes to evaluate the RMST
+//' @param log if true, reports log RMST
+//'
+//' @return T-dim vector giving marginal RMST on specified scale
+//' @noRd
  arma::vec compute_rmst_bb(
      arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw,
      arma::vec const& logomega, arma::vec const& logtimes, bool log
@@ -305,16 +305,16 @@ double logsumexp(arma::vec const& x) {
  }
 
 //' Compute marginal hazard function based on DPMM regression
- //'
- //' @param Mu nxK matrix giving mean of each observation for each class
- //' @param sigma K-dim vector giving standard deviation for each class
- //' @param logw K-dim vector giving log weight for each class
- //' @param logomega n-dim vector giving log of Dirichlet random variable
- //' @param logtimes T-dim vector specifying which logtimes to evaluate the hazard
- //' @param log if true, reports log hazard
- //'
- //' @return T-dim vector giving marginal hazard function on specified scale
- //' @noRd
+//'
+//' @param Mu nxK matrix giving mean of each observation for each class
+//' @param sigma K-dim vector giving standard deviation for each class
+//' @param logw K-dim vector giving log weight for each class
+//' @param logomega n-dim vector giving log of Dirichlet random variable
+//' @param logtimes T-dim vector specifying which logtimes to evaluate the hazard
+//' @param log if true, reports log hazard
+//'
+//' @return T-dim vector giving marginal hazard function on specified scale
+//' @noRd
  arma::vec compute_hazard_bb(
      arma::mat const& Mu, arma::rowvec const& sigma, arma::rowvec const& logw,
      arma::vec const& logomega, arma::vec const& logtimes, bool log
@@ -379,6 +379,83 @@ double logsumexp(arma::vec const& x) {
    }
    return(-1.0);   // never reached
  }
+
+
+
+//' Numerically stable log(exp(logb) - exp(loga))
+//' @param logb larger logged number
+//' @param loga smaller logged number
+//' @noRd
+double logdiffexp(double logb, double loga) {
+ if (loga == R_NegInf) return logb;
+ if (loga > logb) return R_NaN;       // invalid: negative difference
+ if (loga == logb) return R_NegInf;   // log(0)
+ 
+ double d = loga - logb;
+ // exp(d) underflows safely for very negative d
+ return logb + log1p(-std::exp(d));   // numerically stable
+}
+
+// [[Rcpp::export]]
+double sample_tbeta_mixture_posterior(
+    double shape1, double shape2, double lower, double upper,
+    double prior_prob, int nexch, int nunexch
+) {
+  // Return point mass if prior_prob == 1
+  if (prior_prob == 1) return upper;
+  
+  // Calculate posterior parameters
+  double shape1_post = shape1 + nexch;
+  double shape2_post = shape2 + nunexch;
+  
+  // If prior_prob is zero or upper bound is 1 and there are unexchangeable
+  // subjects, sample from truncated beta ( it is impossible for pexch to be 
+  // equal to 1  if there are unexchangeable subjects)
+  if (prior_prob == 0 || (nunexch > 0 && upper == 1) )
+    return rtbeta(shape1_post, shape2_post, lower, upper);
+  
+  // Otherwise, we have a mixture of a (possibly truncated) beta distribution
+  // and a point mass at the upper bound (<=1)
+  
+  // The following are helpful to compute the updated mixture weight
+  double lognc_prior = R::lbeta(shape1, shape2);
+  double lognc_post  = R::lbeta(shape1_post, shape2_post);
+  double logD_prior, logD_post;
+  
+  if (lower == 0 && upper == 1) {
+    logD_prior = 0;
+    logD_post  = 0;
+  } else if (lower == 0 && upper < 1) {
+    logD_prior = R::pbeta(upper, shape1, shape2, 1, 1);
+    logD_post  = R::pbeta(upper, shape1_post, shape2_post, 1, 1);
+  } else if (lower > 0 && upper == 1) { 
+    logD_prior = R::pbeta(lower, shape1, shape2, 0, 1);  // log[1 - F(a)]
+    logD_post  = R::pbeta(lower, shape1_post, shape2_post, 0, 1);
+  } else { 
+    logD_prior = logdiffexp(R::pbeta(upper, shape1, shape2, 1, 1),
+                            R::pbeta(lower, shape1, shape2, 1, 1));
+    logD_post  = logdiffexp(R::pbeta(upper, shape1_post, shape2_post, 1, 1),
+                            R::pbeta(lower, shape1_post, shape2_post, 1, 1));
+  }
+  lognc_prior += logD_prior;
+  lognc_post  += logD_post;
+  
+  // Compute log components (unnormalized) of each mixture weight. The first
+  // component refers to the point mass at `upper` and the second component
+  // refers to the truncated beta
+  arma::vec logpp_comp(2);
+  logpp_comp[0] = log(prior_prob);
+  if (upper < 1)
+    logpp_comp[0] += nexch * log(upper) + nunexch * log1p(-upper);
+  logpp_comp[1] = log1p(-prior_prob) + lognc_post - lognc_prior;
+  
+  // Compute mixture probability; draw a random binary variable z; then draw
+  // from point mass ( if z == 1 ) or truncated beta posterior ( if z == 0 )
+  double p = exp(logpp_comp[0] - logsumexp(logpp_comp));
+  int z = R::rbinom(1, p);
+  return (z == 1) ? upper : rtbeta(shape1_post, shape2_post, lower, upper);
+} 
+
 
 
 

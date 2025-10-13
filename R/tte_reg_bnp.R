@@ -49,7 +49,7 @@ lognormal2gamma <- function(meanlog, sdlog) {
   opt <- optim(par_init, kl_div, method = "L-BFGS-B",
                lower = c(1.1, 1e-4))
   if ( opt$convergence != 0 )
-    warning("Could not minimize KL divergence")
+    warning("Could not minimize KL divergence. Using method of moments")
   
   res = list(shape = opt$par[1], rate = opt$par[2], kl = opt$value)
   attr(res, 'optim') = opt
@@ -90,7 +90,7 @@ get_bm_tte = function (
     sigma0 = vcov0 * (n0 / prior_ess)
     if ( is.null(bm$beta_unexch_bm) ) {
       bm$beta_unexch_bm = distributional::dist_multivariate_normal(
-        mu = list(mle0[1:p0]), sigma = list( as.matrix( sigma0[1:p0,1:p0] )  )
+        mu = list( rep(0, p0) ), sigma = list( as.matrix( sigma0[1:p0,1:p0] )  )
       )
     }
     if ( is.null( bm$tau_unexch_bm ) ) {
@@ -103,8 +103,11 @@ get_bm_tte = function (
     if ( is.null(bm$alpha_unexch_prior) )
       bm$alpha_unexch_prior = distributional::dist_gamma(8, 2)
     
-    if ( is.null(bm$pexch_prior) )
-      bm$pexch_prior = distributional::dist_beta(0.5, 0.5)
+    if ( is.null(bm$pexch_prior) ) {
+      dist1 = distributional::dist_beta(1, 1)
+      dist2 = distributional::dist_degenerate(1)
+      bm$pexch_prior = distributional::dist_mixture(dist1, dist2, weights = c(0.5, 0.5))
+    }
   }
   bm
 }
@@ -387,19 +390,64 @@ tte_check_all_and_export_hyperparams = function(
     ## Check pexch prior and initial value
     stopifnot('`pexch_prior` has not been specified' = !is.null(bm$pexch_prior))
     stopifnot('`pexch_prior` must be an object of type `distribution`' = 'distribution' %in% class(bm$pexch_prior))
-    params  = parameters(bm$pexch_prior)
     if ( family(bm$pexch_prior) == 'beta' ) {
-      hyp$pexch_shape1 = params$shape1
-      hyp$pexch_shape2 = params$shape2
-      hyp$pexch_lower  = 0
-      hyp$pexch_upper  = 1
-    } else if ( family(bm$exch_prior) == 'truncated' ) {
+      hyp$pexch_shape1    = params$shape1
+      hyp$pexch_shape2    = params$shape2
+      hyp$pexch_lower     = 0
+      hyp$pexch_upper     = 1
+      hyp$pexch_priorprob = 0
+    } else if ( family(bm$pexch_prior) == 'truncated' ) {
       stopifnot( "If `pexch_prior` is a truncated prior, it must be a truncated beta prior" = (family(params$dist) == 'beta'))
-      beta_parameters  = parameters(params$dist)
-      hyp$pexch_shape1 = beta_parameters$shape1
-      hyp$pexch_shape2 = beta_parameters$shape2
-      hyp$pexch_lower  = params$lower
-      hyp$pexch_upper  = params$upper
+      beta_parameters     = parameters(params$dist)
+      hyp$pexch_shape1    = beta_parameters$shape1
+      hyp$pexch_shape2    = beta_parameters$shape2
+      hyp$pexch_lower     = params$lower
+      hyp$pexch_upper     = params$upper
+      hyp$pexch_priorprob = 0
+    } else if ( family(bm$pexch_prior) == 'mixture' ) {
+        params   = parameters(bm$pexch_prior)
+        dists    = params$dist[[1]]
+        wts      = params$w[[1]]
+        famnames = sapply(dists, family)
+        stopifnot(
+          'If `pexch_prior` is of type `mixture`, it must be of two components: one component must be degenerate and the other must be a (possibly truncated) beta'
+          = all( length(famnames) == 2, 'degenerate' %in% famnames, any( c('truncated', 'beta') %in% famnames ) )
+        )
+        degenindx     = which(famnames == 'degenerate')
+        pointmass     = parameters(dists[[degenindx]])$x
+        contdist      = dists[-degenindx][[1]]
+        pointmassprob = wts[degenindx]
+        
+        ## Check if continuous distribution is beta
+        if ( family(contdist) == 'beta' ) {
+          stopifnot('If `pexch_prior` is of type `mixture`, the degenerate value must be the maximum support of the continuous distribution' = pointmass == 1)
+          beta_params         = parameters(contdist)
+          hyp$pexch_shape1    = beta_params$shape1
+          hyp$pexch_shape2    = beta_params$shape2
+          hyp$pexch_lower     = 0
+          hyp$pexch_upper     = 1
+          hyp$pexch_priorprob = pointmassprob
+        } else {
+          ## family must be truncated
+          truncated_params = parameters(contdist)
+          truncated_dist   = truncated_params$dist
+          stopifnot( 'If `pexch_prior` is of type `mixture` and the non-degenerate component is truncated, it must be a beta distribution' = family(truncated_dist) == 'beta' )
+          stopifnot( 'If `pexch_prior` is of type `mixture`, the degenerate value must be the maximum support of the continuous distribution' = pointmass == truncated_params$upper )
+          beta_params = parameters(truncated_dist)
+          hyp$pexch_shape1    = beta_params$shape1
+          hyp$pexch_shape2    = beta_params$shape2
+          hyp$pexch_lower     = max(0, truncated_params$lower)
+          hyp$pexch_upper     = min(1, truncated_params$upper)
+          hyp$pexch_priorprob = pointmassprob
+        }
+    } else if ( family(bm$pexch_prior) == 'degenerate' ) {
+        hyp$pexch_shape1    = 1
+        hyp$pexch_shape2    = 1
+        hyp$pexch_lower     = 0
+        hyp$pexch_upper     = as.numeric( parameters(bm$pexch_prior)[[1]] )
+        hyp$pexch_priorprob = 1
+    } else {
+      stop("Prior specified on `pexch` is not supported.")
     }
     stopifnot("Initial value for `pexch` is not in prior support" = density(bm$pexch_prior, inits$pexch) > 0 )
     
@@ -449,7 +497,7 @@ tte_check_all_and_export_hyperparams = function(
 #'  \item `beta_unexch_bm`: either `NULL` or a \code{\link[distributional]{dist_multivariate_normal}} base measure for regression coefficients of the nonexchangeable population; required if `external_data` is not `NULL`; if `NULL`, defaults to a multivariate normal prior with hyperparameters based on the maximum likelihood estimate and inverse information matrix (rescaled to `nsubj` observations) using `external_data`
 #'  \item `tau_unexch_bm`: either `NULL` or a \code{\link[distributional]{dist_gamma}} base measure for the precision of the nonexchangeable population; required if `external_data` is not `NULL`; if `NULL`, defaults to a gamma prior with shape parameter \eqn{\ge} 1.1 that most closely approximates the log-normal distribution implied by the maximum likelihood analysis with asymptotic variance rescaled to `nsubj` observations using `external_data`
 #'  \item `alpha_unexch_prior`: either `NULL` or a \code{\link[distributional]{dist_gamma}} prior or a truncated gamma prior via \code{\link[distributional]{dist_truncated}} for the concentration parameter of the nonexchangeable DPMM; if `NULL`, defaults to a gamma prior with shape parameter 8 and rate parameter 2
-#'  \item `pexch_prior`: either `NULL`, a \code{\link[distributional]{dist_beta}}, or a truncated beta prior via \code{\link[distributional]{dist_truncated}} prior for the probability that an external observation is exchangeable; if `NULL`, defaults to a beta prior with shape parameters equal to 0.5
+#'  \item `pexch_prior`: either `NULL`, a \code{\link[distributional]{dist_beta}}, a truncated beta prior via \code{\link[distributional]{dist_truncated}}, a fixed value via \code{\link[distributional]{dist_degenerate}}, or a mixture of a degenerate distribution and a beta or truncated beta prior via \code{\link[distributional]{dist_mixture}} prior for the probability that an external observation is exchangeable; if `NULL`, defaults a 0.5-0.5 mixture of a uniform (Beta(1,1)) prior and a point mass at 1. If the prior is a mixture, the degenerate distribution must line up with the maximum possible value of `pexch`.
 #' }
 #' @param nburnin number of MCMC burn-in samples
 #' @param nsamples number of desired posterior samples after burn-in (and thinning)
@@ -461,9 +509,9 @@ tte_check_all_and_export_hyperparams = function(
 #'   \item `alpha`: Dirichlet process concentration parameter for exchangeable population; set to the prior mean implied by `alpha_prior`
 #'   \item \code{v}: \eqn{(K - 1)}-dimensional vector giving stick-breaking variables for the exchangeable population; defaults to \eqn{(K - 1)} samples from a Beta(1, \code{alpha}) distribution
 #'   \item `pexch`: probability that a subject in `external_data` is exchangeable; defaults to prior mean of `pexch_prior`; ignored if `external_data` is `NULL`
-#'   \item `eps0`: \eqn{n_0 \times K_unexch} matrix of exchangeability indicators for external data; default value is based on highest likelihood from initial values; ignored if `external_data` is `NULL`
-#'   \item `beta_unexch`: \eqn{K_unexch \times p} `matrix` giving cluster regression coefficients for unexchangeable population; default behavior is analogous to `beta` but using `external_data`; ignored if `external_data` is `NULL`
-#'   \item `tau_unexch`: \eqn{K_unexch}-`vector` giving cluster precision parmaeters for unexchangeable population; default behavior is analogous to `tau` but using `external_data`; ignored if `external_data` is `NULL`
+#'   \item `eps0`: \eqn{n_0 \times K_{unexch}} matrix of exchangeability indicators for external data; default value is based on highest likelihood from initial values; ignored if `external_data` is `NULL`
+#'   \item `beta_unexch`: \eqn{K_{unexch} \times p} `matrix` giving cluster regression coefficients for unexchangeable population; default behavior is analogous to `beta` but using `external_data`; ignored if `external_data` is `NULL`
+#'   \item `tau_unexch`: \eqn{K_{unexch}}-`vector` giving cluster precision parmaeters for unexchangeable population; default behavior is analogous to `tau` but using `external_data`; ignored if `external_data` is `NULL`
 #'   \item `alpha_unexch`: mean of `alpha_unexch_prior`; ignored if `external_data` is `NULL`
 #'   \item `v_unexch`: \eqn{(K_{unexch} - 1)}-vector giving stick-breaking variables for unexchangeable population; defaults to samples from Beta(1, alpha_unexch); ignored if `external_data` is `NULL`
 #'   \item `z0`: a \eqn{n_0}-`vector` consisting of starting values for latent clusters for the external data; default is based on likelihood using initial parameters; ignored if `external_data` is `NULL`; if `eps0 == 1` then `z0` should be between `1:K` otherwise between `1:K_unexch`. Defaults to the maximum log likelihood among the `K` clusters using `beta_init`, `tau_init`, `beta_unexch_init`, and `tau_unexch_init`. Note: if `z0` is specified then `eps0` must also be specified.

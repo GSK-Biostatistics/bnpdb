@@ -11,6 +11,23 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// sample_tbeta_mixture_posterior
+double sample_tbeta_mixture_posterior(double shape1, double shape2, double lower, double upper, double prior_prob, int nexch, int nunexch);
+RcppExport SEXP _bnpdb_sample_tbeta_mixture_posterior(SEXP shape1SEXP, SEXP shape2SEXP, SEXP lowerSEXP, SEXP upperSEXP, SEXP prior_probSEXP, SEXP nexchSEXP, SEXP nunexchSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
+    Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
+    Rcpp::traits::input_parameter< double >::type lower(lowerSEXP);
+    Rcpp::traits::input_parameter< double >::type upper(upperSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_prob(prior_probSEXP);
+    Rcpp::traits::input_parameter< int >::type nexch(nexchSEXP);
+    Rcpp::traits::input_parameter< int >::type nunexch(nunexchSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_tbeta_mixture_posterior(shape1, shape2, lower, upper, prior_prob, nexch, nunexch));
+    return rcpp_result_gen;
+END_RCPP
+}
 // tte_reg_bnpdb_cpp
 Rcpp::List tte_reg_bnpdb_cpp(Rcpp::List const& data_list, Rcpp::List const& histdata_list, Rcpp::List const& basemeasure_list, Rcpp::List const& inits_list, int const& niter, int const& nburnin, int const& nthin);
 RcppExport SEXP _bnpdb_tte_reg_bnpdb_cpp(SEXP data_listSEXP, SEXP histdata_listSEXP, SEXP basemeasure_listSEXP, SEXP inits_listSEXP, SEXP niterSEXP, SEXP nburninSEXP, SEXP nthinSEXP) {
@@ -82,6 +99,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_bnpdb_sample_tbeta_mixture_posterior", (DL_FUNC) &_bnpdb_sample_tbeta_mixture_posterior, 7},
     {"_bnpdb_tte_reg_bnpdb_cpp", (DL_FUNC) &_bnpdb_tte_reg_bnpdb_cpp, 7},
     {"_bnpdb_tte_reg_dpmm_cpp", (DL_FUNC) &_bnpdb_tte_reg_dpmm_cpp, 6},
     {"_bnpdb_marginalize_strataonly", (DL_FUNC) &_bnpdb_marginalize_strataonly, 8},
