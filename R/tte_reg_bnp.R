@@ -390,6 +390,7 @@ tte_check_all_and_export_hyperparams = function(
     ## Check pexch prior and initial value
     stopifnot('`pexch_prior` has not been specified' = !is.null(bm$pexch_prior))
     stopifnot('`pexch_prior` must be an object of type `distribution`' = 'distribution' %in% class(bm$pexch_prior))
+    params = parameters(bm$pexch_prior)
     if ( family(bm$pexch_prior) == 'beta' ) {
       hyp$pexch_shape1    = params$shape1
       hyp$pexch_shape2    = params$shape2
@@ -405,7 +406,6 @@ tte_check_all_and_export_hyperparams = function(
       hyp$pexch_upper     = params$upper
       hyp$pexch_priorprob = 0
     } else if ( family(bm$pexch_prior) == 'mixture' ) {
-        params   = parameters(bm$pexch_prior)
         dists    = params$dist[[1]]
         wts      = params$w[[1]]
         famnames = sapply(dists, family)
